@@ -1,0 +1,2 @@
+# DependenciesSelector
+Unity中用于找寻指定prefab所依赖的所有资源的插件
