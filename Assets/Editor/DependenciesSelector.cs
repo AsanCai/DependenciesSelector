@@ -46,84 +46,6 @@ namespace Dependency{
             window.Show();
         }
 
-        // 获取所有引用资源的路径
-        private static void GetAllDependencies(Object prefab){
-            // 清空当前的保存的依赖资源路径
-            dependentPaths.Clear();
-
-            selectedObjs.Clear();
-
-            string currentPath = AssetDatabase.GetAssetPath(prefab);
-            Object[] roots = new Object[] { prefab };
-
-            // 添加prefab所在路径
-            dependentPaths.Add(currentPath);
-            selectedObjs.Add(prefab);
-
-            Object[] dependentObjs = EditorUtility.CollectDependencies(roots);
-            string path;
-            foreach(Object dependency in dependentObjs){
-                path = AssetDatabase.GetAssetPath(dependency);
-                Debug.Log(path);
-                if(path == currentPath){
-                    // 如果是自身，则不添加
-                    continue;
-                }
-
-                // 因为EditorUtility.CollectDependencies有可能返回默认的Unity内置资源
-                // 因此需要根据返回形式来判断当前引用是否为默认资源
-                if(File.Exists(path)){
-                    dependentPaths.Add(path);
-                    selectedObjs.Add(dependency);
-                }
-            }
-        }
-
-        // 复制资源到指定文件夹
-        private static void CopyAllDependencies(string copyFolder){
-            // 重置当前未复制的文件数
-            remainCount = dependentPaths.Count;
-            // 开始复制资源操作
-            string sourPath, destPath;
-            string destDirectory;
-            try {
-                // 如果选择的文件夹不存在，那么就创建文件夹
-                if(!Directory.Exists(copyFolder)){
-                    Directory.CreateDirectory(copyFolder);
-                }
-
-                foreach(string dependentPath in dependentPaths){
-                    sourPath = projectDir + "/" + dependentPath;
-                    destPath = copyFolder + "/" + dependentPath;
-                    destDirectory = Path.GetDirectoryName(destPath);
-                    
-                    // 创建目标资源所在的文件夹
-                    if(!Directory.Exists(destDirectory)){
-                        Directory.CreateDirectory(destDirectory);
-                    }
-
-                    // 采用强制覆盖的形式拷贝资源
-                    File.Copy(sourPath, destPath, true);
-                    remainCount --;
-
-                    // 显示进度条
-                    EditorUtility.DisplayProgressBar("Copy progress", "Remians " + remainCount + " files haven't been copyed.", remainCount / dependentPaths.Count);
-                }
-            } catch (System.Exception e) {
-                EditorUtility.DisplayDialog("Copy faild", e.Message, "OK", "");
-                // 创建目录失败
-                return;
-            }
-
-            // 关闭进度条
-            EditorUtility.ClearProgressBar();
-        }
-
-        // 修改文件路径里面的分隔符
-        private static string ModifyPath(string path){
-            return path.Replace('\\', '/');
-        }
-
         void OnGUI() {
             EditorGUILayout.BeginVertical();
             
@@ -195,8 +117,8 @@ namespace Dependency{
                     }
                 }
 
-                if(GUILayout.Button("Select in project", GUILayout.Height(18), GUILayout.Width(140))){
-                    Selection.objects = selectedObjs.ToArray();
+                if(GUILayout.Button("Commit", GUILayout.Height(18), GUILayout.Width(140))){
+                    SVNTool.Init(dependentPaths);
                 }
                 EditorGUILayout.EndHorizontal();
 
@@ -214,6 +136,84 @@ namespace Dependency{
 
         void OnInspectorUpdate() {
             Repaint();
+        }
+
+        // 获取所有引用资源的路径
+        private static void GetAllDependencies(Object prefab){
+            // 清空当前的保存的依赖资源路径
+            dependentPaths.Clear();
+
+            selectedObjs.Clear();
+
+            string currentPath = AssetDatabase.GetAssetPath(prefab);
+            Object[] roots = new Object[] { prefab };
+
+            // 添加prefab所在路径
+            dependentPaths.Add(currentPath);
+            selectedObjs.Add(prefab);
+
+            Object[] dependentObjs = EditorUtility.CollectDependencies(roots);
+            string path;
+            foreach(Object dependency in dependentObjs){
+                path = AssetDatabase.GetAssetPath(dependency);
+                Debug.Log(path);
+                if(path == currentPath){
+                    // 如果是自身，则不添加
+                    continue;
+                }
+
+                // 因为EditorUtility.CollectDependencies有可能返回默认的Unity内置资源
+                // 因此需要根据返回形式来判断当前引用是否为默认资源
+                if(File.Exists(path)){
+                    dependentPaths.Add(path);
+                    selectedObjs.Add(dependency);
+                }
+            }
+        }
+
+        // 复制资源到指定文件夹
+        private static void CopyAllDependencies(string copyFolder){
+            // 重置当前未复制的文件数
+            remainCount = dependentPaths.Count;
+            // 开始复制资源操作
+            string sourPath, destPath;
+            string destDirectory;
+            try {
+                // 如果选择的文件夹不存在，那么就创建文件夹
+                if(!Directory.Exists(copyFolder)){
+                    Directory.CreateDirectory(copyFolder);
+                }
+
+                foreach(string dependentPath in dependentPaths){
+                    sourPath = projectDir + "/" + dependentPath;
+                    destPath = copyFolder + "/" + dependentPath;
+                    destDirectory = Path.GetDirectoryName(destPath);
+                    
+                    // 创建目标资源所在的文件夹
+                    if(!Directory.Exists(destDirectory)){
+                        Directory.CreateDirectory(destDirectory);
+                    }
+
+                    // 采用强制覆盖的形式拷贝资源
+                    File.Copy(sourPath, destPath, true);
+                    remainCount --;
+
+                    // 显示进度条
+                    EditorUtility.DisplayProgressBar("Copy progress", "Remians " + remainCount + " files haven't been copyed.", 1.0f * remainCount / dependentPaths.Count);
+                }
+            } catch (System.Exception e) {
+                EditorUtility.DisplayDialog("Copy faild", e.Message, "OK", "");
+                // 创建目录失败
+                return;
+            }
+
+            // 关闭进度条
+            EditorUtility.ClearProgressBar();
+        }
+
+        // 修改文件路径里面的分隔符
+        private static string ModifyPath(string path){
+            return path.Replace('\\', '/');
         }
     }
 }
